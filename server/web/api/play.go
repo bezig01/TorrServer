@@ -67,22 +67,15 @@ func play(c *gin.Context) {
 		}
 	}
 
-	// Check for downloaded file BEFORE GotInfo() so offline files work without peers
+	// Check for downloaded file — try DB first (works even without torrent connection)
 	dlHash := spec.InfoHash.HexString()
+	ind, _ := strconv.Atoi(indexStr)
 	if sets.BTsets.EnableDownload && sets.BTsets.DownloadPath != "" {
-		if tor.Torrent != nil && tor.Info() != nil {
-			st := tor.Status()
-			ind, _ := strconv.Atoi(indexStr)
-			for _, fileStat := range st.FileStats {
-				if fileStat.Id == ind {
-					filePath := filepath.Join(sets.BTsets.DownloadPath, dlHash, fileStat.Path)
-					if _, err := os.Stat(filePath); err == nil {
-						serveLocalFile(c, filePath, fileStat.Path, dlHash)
-						return
-					}
-					break
-				}
-			}
+		// Try to find file path from DB or filesystem
+		if filePath := findDownloadedFile(dlHash, ind, tor); filePath != "" {
+			fileName := filepath.Base(filePath)
+			serveLocalFile(c, filePath, fileName, dlHash)
+			return
 		}
 	}
 
@@ -95,17 +88,10 @@ func play(c *gin.Context) {
 
 	// Re-check for downloaded file after GotInfo() (hash might differ)
 	if sets.BTsets.EnableDownload && sets.BTsets.DownloadPath != "" {
-		st := tor.Status()
-		ind, _ := strconv.Atoi(indexStr)
-		for _, fileStat := range st.FileStats {
-			if fileStat.Id == ind {
-				filePath := filepath.Join(sets.BTsets.DownloadPath, hash, fileStat.Path)
-				if _, err := os.Stat(filePath); err == nil {
-					serveLocalFile(c, filePath, fileStat.Path, hash)
-					return
-				}
-				break
-			}
+		if filePath := findDownloadedFile(hash, ind, tor); filePath != "" {
+			fileName := filepath.Base(filePath)
+			serveLocalFile(c, filePath, fileName, hash)
+			return
 		}
 	}
 
@@ -125,6 +111,50 @@ func play(c *gin.Context) {
 	}
 
 	tor.Stream(index, c.Request, c.Writer)
+}
+
+// findDownloadedFile tries to find a downloaded file by hash and file index
+// Works even when torrent is not connected (uses DB or filesystem)
+func findDownloadedFile(hash string, fileIndex int, tor *torr.Torrent) string {
+	// Method 1: Check DB for download record
+	dl := sets.GetDownload(hash)
+	if dl != nil {
+		// We have DB record, but need file path from torrent info
+		if tor.Torrent != nil && tor.Info() != nil {
+			st := tor.Status()
+			for _, fileStat := range st.FileStats {
+				if fileStat.Id == fileIndex {
+					filePath := filepath.Join(dl.Path, fileStat.Path)
+					if _, err := os.Stat(filePath); err == nil {
+						return filePath
+					}
+					break
+				}
+			}
+		}
+	}
+
+	// Method 2: Check filesystem directly (scan for any media files)
+	if sets.BTsets.DownloadPath != "" {
+		downloadDir := filepath.Join(sets.BTsets.DownloadPath, hash)
+		if _, err := os.Stat(downloadDir); err == nil {
+			// Directory exists, find the file
+			if tor.Torrent != nil && tor.Info() != nil {
+				st := tor.Status()
+				for _, fileStat := range st.FileStats {
+					if fileStat.Id == fileIndex {
+						filePath := filepath.Join(downloadDir, fileStat.Path)
+						if _, err := os.Stat(filePath); err == nil {
+							return filePath
+						}
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return ""
 }
 
 func serveLocalFile(c *gin.Context, filePath, fileName, hash string) {
