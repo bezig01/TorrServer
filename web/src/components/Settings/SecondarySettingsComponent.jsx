@@ -72,6 +72,9 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
     ShowFSActiveTorr,
     EnableProxy,
     ProxyHosts,
+    EnableDownload,
+    DownloadPath,
+    DownloadTTL,
   } = settings || {}
 
   // Local state for ProxyHosts text input
@@ -472,6 +475,40 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
           </StatusMessage>
         )}
       </Box>
+      {/* Download Section */}
+      <SettingSectionLabel style={{ marginTop: '20px' }}>Download</SettingSectionLabel>
+      <FormGroup>
+        <FormControlLabel
+          control={<Switch checked={EnableDownload} onChange={inputForm} id='EnableDownload' color='secondary' />}
+          label='Enable Pre-Download'
+          labelPlacement='start'
+        />
+        <FormHelperText margin='none'>Enable full torrent download for offline viewing</FormHelperText>
+      </FormGroup>
+      <TextField
+        onChange={inputForm}
+        margin='normal'
+        id='DownloadPath'
+        label='Download Path'
+        helperText='Directory path for downloaded files'
+        value={DownloadPath}
+        type='url'
+        variant='outlined'
+        fullWidth
+        disabled={!EnableDownload}
+      />
+      <TextField
+        onChange={inputForm}
+        margin='normal'
+        id='DownloadTTL'
+        label='Default TTL (minutes)'
+        helperText='Default time-to-live for downloads (0 = no expiry). 43200 = 30 days'
+        value={DownloadTTL}
+        type='number'
+        variant='outlined'
+        fullWidth
+        disabled={!EnableDownload}
+      />
       {/* ProxyP2P */}
       <SettingSectionLabel style={{ marginTop: '20px' }}>{t('Proxy')}</SettingSectionLabel>
       <FormGroup>

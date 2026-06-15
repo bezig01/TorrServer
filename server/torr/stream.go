@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -49,8 +50,21 @@ func (t *Torrent) Stream(fileID int, req *http.Request, resp http.ResponseWriter
 		http.NotFound(resp, req)
 		return errors.New("torrent doesn't have info yet")
 	}
-	// Get file information
+
+	hash := t.Hash().HexString()
+
+	// Check if file is downloaded
 	st := t.Status()
+	for _, fileStat := range st.FileStats {
+		if fileStat.Id == fileID {
+			filePath := GetDownloadFilePath(hash, fileStat.Path)
+			if filePath != "" {
+				return t.streamLocalFile(filePath, fileStat.Path, req, resp)
+			}
+			break
+		}
+	}
+	// Get file information
 	var stFile *state.TorrentFileStat
 	for _, fileStat := range st.FileStats {
 		if fileStat.Id == fileID {
@@ -169,4 +183,43 @@ func (t *Torrent) Stream(fileID int, req *http.Request, resp http.ResponseWriter
 // GetActiveStreams returns number of currently active streams
 func GetActiveStreams() int32 {
 	return atomic.LoadInt32(&activeStreams)
+}
+
+func (t *Torrent) streamLocalFile(filePath, fileName string, req *http.Request, resp http.ResponseWriter) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("cannot open downloaded file: %w", err)
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("cannot stat file: %w", err)
+	}
+
+	resp.Header().Set("Connection", "close")
+	resp.Header().Set("Server", "TorrServer (Portable SDK for UPnP devices)")
+
+	etag := hex.EncodeToString([]byte(fmt.Sprintf("%s/%s", t.Hash().HexString(), fileName)))
+	resp.Header().Set("ETag", httptoo.EncodeQuotedString(etag))
+	resp.Header().Set("transferMode.dlna.org", "Streaming")
+
+	mime, err := mt.MimeTypeByPath(fileName)
+	if err == nil && mime.IsMedia() {
+		resp.Header().Set("content-type", mime.String())
+	}
+
+	if req.Header.Get("getContentFeatures.dlna.org") != "" {
+		resp.Header().Set("contentFeatures.dlna.org", dlna.ContentFeatures{
+			SupportRange:    true,
+			SupportTimeSeek: true,
+		}.String())
+	}
+
+	if req.Header.Get("Range") != "" {
+		resp.Header().Set("Accept-Ranges", "bytes")
+	}
+
+	http.ServeContent(resp, req, fileName, stat.ModTime(), file)
+	return nil
 }

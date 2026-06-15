@@ -11,12 +11,17 @@ import (
 
 	"server/log"
 	"server/settings"
+	"server/torr"
 	"server/torr/utils"
 	"server/web"
 )
 
 func Start() {
 	settings.InitSets(settings.Args.RDB, settings.Args.SearchWA)
+
+	// Initialize download manager
+	torr.InitDownloadManager()
+
 	// https checks
 	if settings.Args.Ssl {
 		// set settings ssl enabled

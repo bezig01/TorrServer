@@ -12,8 +12,9 @@ type Piece struct {
 	Id   int   `json:"-"`
 	Size int64 `json:"size"`
 
-	Complete bool  `json:"complete"`
-	Accessed int64 `json:"accessed"`
+	Complete     bool  `json:"complete"`
+	Accessed     int64 `json:"accessed"`
+	IsDownloaded bool  `json:"is_downloaded"`
 
 	mPiece *MemPiece  `json:"-"`
 	dPiece *DiskPiece `json:"-"`
@@ -59,6 +60,10 @@ func (p *Piece) MarkComplete() error {
 func (p *Piece) MarkNotComplete() error {
 	p.Complete = false
 	return nil
+}
+
+func (p *Piece) MarkDownloaded() {
+	p.IsDownloaded = true
 }
 
 func (p *Piece) Completion() storage.Completion {

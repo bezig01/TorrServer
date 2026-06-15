@@ -166,6 +166,16 @@ func RemTorrent(hashHex string) {
 	}
 	hash := metainfo.NewHashFromHex(hashHex)
 	
+	// Remove downloaded files if download feature is enabled
+	if sets.BTsets.EnableDownload && sets.BTsets.DownloadPath != "" && hashHex != "" && hashHex != "/" {
+		downloadPath := filepath.Join(sets.BTsets.DownloadPath, hashHex)
+		if _, err := os.Stat(downloadPath); err == nil {
+			log.TLogln("Removing downloaded files for:", hashHex)
+			os.RemoveAll(downloadPath)
+		}
+		sets.RemDownload(hashHex)
+	}
+
 	// Download the torrent before deleting it to get the "closed" status
 	torr := bts.GetTorrent(hash)
 	if torr == nil {

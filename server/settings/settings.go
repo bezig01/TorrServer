@@ -255,6 +255,7 @@ func setupDatabaseRouting(bboltDB, jsonDB TorrServerDB, settingsInJson, viewedIn
 	}
 
 	dbRouter.RegisterRoute(bboltDB, "Torrents")
+	dbRouter.RegisterRoute(bboltDB, "Downloads")
 	tdb = NewDBReadCache(dbRouter)
 }
 

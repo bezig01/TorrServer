@@ -239,6 +239,10 @@ func (c *Cache) getRemPieces() []*Piece {
 		if p.Size > 0 {
 			fill += p.Size
 		}
+		// Skip downloaded pieces - they should not be evicted
+		if p.IsDownloaded {
+			continue
+		}
 		if len(ranges) > 0 {
 			if !inRanges(ranges, id) {
 				if p.Size > 0 && !c.isIdInFileBE(ranges, id) {
@@ -399,4 +403,21 @@ func (c *Cache) GetCapacity() int64 {
 		return 0
 	}
 	return c.capacity
+}
+
+func (c *Cache) MarkPiecesDownloaded(pieceIds []int) {
+	c.muRemove.Lock()
+	defer c.muRemove.Unlock()
+
+	for _, id := range pieceIds {
+		if p, ok := c.pieces[id]; ok {
+			p.MarkDownloaded()
+		}
+	}
+}
+
+func (c *Cache) IncreaseCapacity(additional int64) {
+	c.muRemove.Lock()
+	defer c.muRemove.Unlock()
+	c.capacity += additional
 }

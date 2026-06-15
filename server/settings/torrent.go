@@ -27,6 +27,15 @@ type File struct {
 	Size int64  `json:"size,omitempty"`
 }
 
+type DownloadDB struct {
+	Hash       string `json:"hash"`
+	Path       string `json:"path"`        // download directory
+	ExpiryDate int64  `json:"expiry_date"` // unix timestamp, 0 = no expiry
+	CreatedAt  int64  `json:"created_at"`
+	TotalSize  int64  `json:"total_size"`
+	FileCount  int    `json:"file_count"`
+}
+
 var mu sync.Mutex
 
 func AddTorrent(torr *TorrentDB) {
@@ -83,4 +92,54 @@ func RemTorrent(hash metainfo.Hash) {
 	mu.Lock()
 	tdb.Rem("Torrents", hash.HexString())
 	mu.Unlock()
+}
+
+func AddDownload(dl *DownloadDB) {
+	mu.Lock()
+	defer mu.Unlock()
+	buf, err := json.Marshal(dl)
+	if err != nil {
+		return
+	}
+	tdb.Set("Downloads", dl.Hash, buf)
+}
+
+func GetDownload(hash string) *DownloadDB {
+	mu.Lock()
+	defer mu.Unlock()
+	buf := tdb.Get("Downloads", hash)
+	if len(buf) == 0 {
+		return nil
+	}
+	var dl DownloadDB
+	if err := json.Unmarshal(buf, &dl); err != nil {
+		return nil
+	}
+	return &dl
+}
+
+func ListDownloads() []*DownloadDB {
+	mu.Lock()
+	defer mu.Unlock()
+	var list []*DownloadDB
+	keys := tdb.List("Downloads")
+	for _, key := range keys {
+		buf := tdb.Get("Downloads", key)
+		if len(buf) > 0 {
+			var dl DownloadDB
+			if err := json.Unmarshal(buf, &dl); err == nil {
+				list = append(list, &dl)
+			}
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].CreatedAt > list[j].CreatedAt
+	})
+	return list
+}
+
+func RemDownload(hash string) {
+	mu.Lock()
+	defer mu.Unlock()
+	tdb.Rem("Downloads", hash)
 }

@@ -33,4 +33,7 @@ export default {
   StoreSettingsInJson: true,
   EnableProxy: false,
   ProxyHosts: ['*themoviedb.org', '*tmdb.org', 'rutor.info'],
+  EnableDownload: false,
+  DownloadPath: '',
+  DownloadTTL: 43200,
 }

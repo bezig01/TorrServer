@@ -16,6 +16,8 @@ func (t TorrentStat) String() string {
 		return "Torrent closed"
 	case TorrentInDB:
 		return "Torrent in db"
+	case TorrentDownloading:
+		return "Torrent downloading"
 	default:
 		return "Torrent unknown status"
 	}
@@ -28,6 +30,7 @@ const (
 	TorrentWorking
 	TorrentClosed
 	TorrentInDB
+	TorrentDownloading
 )
 
 type TorrentStatus struct {

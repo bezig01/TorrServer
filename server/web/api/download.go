@@ -1,64 +1,150 @@
 package api
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"server/torr"
 )
 
-type fileReader struct {
-	pos  int64
-	size int64
-	io.ReadSeeker
+type downloadReqJS struct {
+	requestI
+	Hash string `json:"hash,omitempty"`
+	TTL  int    `json:"ttl,omitempty"` // minutes, 0 = no expiry
 }
 
-func newFR(size int64) *fileReader {
-	return &fileReader{
-		pos:  0,
-		size: size,
-	}
-}
-
-func (f *fileReader) Read(p []byte) (n int, err error) {
-	f.pos = f.pos + int64(len(p))
-	return len(p), nil
-}
-
-func (f *fileReader) Seek(offset int64, whence int) (int64, error) {
-	switch whence {
-	case 0:
-		f.pos = offset
-	case 1:
-		f.pos += offset
-	case 2:
-		f.pos = f.size + offset
-	}
-	return f.pos, nil
-}
-
-// download godoc
-//
-//	@Summary		Generates test file of given size
-//	@Description	Download the test file of given size (for speed testing purpose).
-//
-//	@Tags			API
-//
-//	@Param			size	path	string	true	"Test file size (in MB)"
-//
-//	@Produce		application/octet-stream
-//	@Success		200 {file} file
-//	@Router			/download/{size} [get]
 func download(c *gin.Context) {
-	szStr := c.Param("size")
-	sz, err := strconv.Atoi(szStr)
-	if err != nil {
-		c.Error(err)
+	var req downloadReqJS
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	http.ServeContent(c.Writer, c.Request, fmt.Sprintln(szStr)+"mb.bin", time.Now(), newFR(int64(sz*1024*1024)))
+	switch req.Action {
+	case "start":
+		startDownload(c, req)
+	case "cancel":
+		cancelDownload(c, req)
+	case "status":
+		getDownloadStatus(c, req)
+	case "list":
+		listDownloads(c)
+	default:
+		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
+	}
+}
+
+func startDownload(c *gin.Context, req downloadReqJS) {
+	if req.Hash == "" {
+		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
+		return
+	}
+
+	tor := torr.GetTorrent(req.Hash)
+	if tor == nil {
+		c.AbortWithError(http.StatusNotFound, http.ErrNoLocation)
+		return
+	}
+
+	ttl := req.TTL
+	if ttl == 0 {
+		ttl = 30 * 24 * 60 // 30 days default
+	}
+
+	dlMgr := torr.GetDownloadManager()
+	if err := dlMgr.StartDownload(tor, ttl); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"hash":   req.Hash,
+		"ttl":    ttl,
+		"status": "started",
+	})
+}
+
+func cancelDownload(c *gin.Context, req downloadReqJS) {
+	if req.Hash == "" {
+		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
+		return
+	}
+
+	dlMgr := torr.GetDownloadManager()
+	if err := dlMgr.CancelDownload(req.Hash); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"hash":   req.Hash,
+		"status": "cancelled",
+	})
+}
+
+func getDownloadStatus(c *gin.Context, req downloadReqJS) {
+	if req.Hash == "" {
+		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
+		return
+	}
+
+	dlMgr := torr.GetDownloadManager()
+	info := dlMgr.GetDownloadStatus(req.Hash)
+	if info == nil {
+		dlDB := torr.GetDownloadInfoByHash(req.Hash)
+		if dlDB == nil {
+			c.AbortWithError(http.StatusNotFound, http.ErrNoLocation)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"hash":        dlDB.Hash,
+			"path":        dlDB.Path,
+			"total_size":  dlDB.TotalSize,
+			"file_count":  dlDB.FileCount,
+			"expiry_date": dlDB.ExpiryDate,
+			"created_at":  dlDB.CreatedAt,
+			"status":      "completed",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"hash":        info.Hash,
+		"path":        info.Path,
+		"total_size":  info.TotalSize,
+		"downloaded":  info.Downloaded,
+		"file_count":  info.FileCount,
+		"files_done":  info.FilesDone,
+		"expiry_date": info.ExpiryDate.Unix(),
+		"is_complete":  info.IsComplete,
+		"status":      "downloading",
+	})
+}
+
+func listDownloads(c *gin.Context) {
+	dlMgr := torr.GetDownloadManager()
+	downloads := dlMgr.ListDownloads()
+
+	var result []gin.H
+	for _, dl := range downloads {
+		item := gin.H{
+			"hash":        dl.Hash,
+			"path":        dl.Path,
+			"total_size":  dl.TotalSize,
+			"downloaded":  dl.Downloaded,
+			"file_count":  dl.FileCount,
+			"files_done":  dl.FilesDone,
+			"expiry_date": dl.ExpiryDate.Unix(),
+			"is_complete":  dl.IsComplete,
+		}
+		if dl.IsError {
+			item["error"] = dl.ErrorMsg
+		}
+		result = append(result, item)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"downloads": result,
+	})
 }

@@ -90,6 +90,11 @@ type BTSets struct {
 	// P2P Proxy
 	EnableProxy bool
 	ProxyHosts  []string
+
+	// Download
+	EnableDownload bool   // enable pre-download feature
+	DownloadPath   string // path for downloaded files
+	DownloadTTL    int    // default TTL in minutes (0 = no expiry)
 }
 
 func (v *BTSets) String() string {
@@ -126,6 +131,10 @@ func SetBTSets(sets *BTSets) {
 	}
 	if sets.PreloadCache > 100 {
 		sets.PreloadCache = 100
+	}
+
+	if sets.DownloadPath == "" {
+		sets.EnableDownload = false
 	}
 
 	if sets.TorrentsSavePath == "" {
@@ -178,6 +187,9 @@ func SetDefaultConfig() {
 		ImageURL:   "https://image.tmdb.org",
 		ImageURLRu: "https://imagetmdb.com",
 	}
+	// Download defaults
+	sets.EnableDownload = false
+	sets.DownloadTTL = 30 * 24 * 60 // 30 days in minutes
 	BTsets = sets
 	if !ReadOnly {
 		buf, err := json.Marshal(BTsets)
