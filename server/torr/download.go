@@ -166,6 +166,12 @@ func (dm *DownloadManager) downloadTorrent(ctx context.Context, t *Torrent, info
 		t.muTorrent.Unlock()
 
 		t.AddExpiredTime(time.Second * time.Duration(sets.BTsets.TorrentDisconnectTimeout))
+
+		// Remove from active downloads map after completion or error
+		// (DB entry persists for cleanup daemon to handle TTL)
+		dm.mu.Lock()
+		delete(dm.downloads, info.Hash)
+		dm.mu.Unlock()
 	}()
 
 	// Check if download path is writable before starting
@@ -347,7 +353,7 @@ func (dm *DownloadManager) ListDownloads() []*DownloadInfo {
 }
 
 func (dm *DownloadManager) cleanupLoop() {
-	ticker := time.NewTicker(time.Hour)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
