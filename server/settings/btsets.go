@@ -221,6 +221,10 @@ func loadBTSets() {
 					ImageURLRu: "https://imagetmdb.com",
 				}
 			}
+			// Download settings: ensure safe defaults for old configs
+			if BTsets.DownloadPath == "" {
+				BTsets.EnableDownload = false
+			}
 			return
 		}
 		log.TLogln("Error unmarshal btsets", err)
