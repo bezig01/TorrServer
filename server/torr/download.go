@@ -353,7 +353,7 @@ func (dm *DownloadManager) ListDownloads() []*DownloadInfo {
 }
 
 func (dm *DownloadManager) cleanupLoop() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 
 	for range ticker.C {
