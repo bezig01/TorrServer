@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/anacrolix/torrent"
@@ -45,6 +46,7 @@ func InitDownloadManager() {
 		downloads: make(map[string]*DownloadInfo),
 	}
 	go downloadMgr.cleanupLoop()
+	downloadMgr.cleanupOrphanedFiles()
 	log.TLogln("Download manager initialized")
 }
 
@@ -166,9 +168,31 @@ func (dm *DownloadManager) downloadTorrent(ctx context.Context, t *Torrent, info
 		t.AddExpiredTime(time.Second * time.Duration(sets.BTsets.TorrentDisconnectTimeout))
 	}()
 
+	// Check if download path is writable before starting
 	if err := os.MkdirAll(info.Path, 0755); err != nil {
 		downloadErr = fmt.Errorf("cannot create download directory: %w", err)
 		return
+	}
+
+	// Test write permission
+	testFile := filepath.Join(info.Path, ".write_test")
+	if f, err := os.Create(testFile); err != nil {
+		downloadErr = fmt.Errorf("download path is not writable: %w", err)
+		return
+	} else {
+		f.Close()
+		os.Remove(testFile)
+	}
+
+	// Check available disk space
+	var diskUsage syscall.Statfs_t
+	if err := syscall.Statfs(info.Path, &diskUsage); err == nil {
+		available := int64(diskUsage.Bavail) * int64(diskUsage.Bsize)
+		if available < info.TotalSize {
+			downloadErr = fmt.Errorf("insufficient disk space: need %d MB, have %d MB",
+				info.TotalSize/1024/1024, available/1024/1024)
+			return
+		}
 	}
 
 	// Increase cache capacity for download to prevent piece eviction
@@ -331,6 +355,34 @@ func (dm *DownloadManager) cleanupLoop() {
 	}
 }
 
+// cleanupOrphanedFiles removes download directories that are not tracked in DB
+// This handles cases where server crashed during download
+func (dm *DownloadManager) cleanupOrphanedFiles() {
+	if sets.ReadOnly || sets.BTsets.DownloadPath == "" {
+		return
+	}
+
+	dirs, err := os.ReadDir(sets.BTsets.DownloadPath)
+	if err != nil {
+		return
+	}
+
+	dbDownloads := sets.ListDownloads()
+	dbHashes := make(map[string]bool)
+	for _, dl := range dbDownloads {
+		dbHashes[dl.Hash] = true
+	}
+
+	for _, dir := range dirs {
+		if dir.IsDir() && len(dir.Name()) == 40 { // infohash is 40 hex chars
+			if !dbHashes[dir.Name()] {
+				log.TLogln("Removing orphaned download directory:", dir.Name())
+				os.RemoveAll(filepath.Join(sets.BTsets.DownloadPath, dir.Name()))
+			}
+		}
+	}
+}
+
 func (dm *DownloadManager) cleanupExpired() {
 	if sets.ReadOnly {
 		return
@@ -341,6 +393,15 @@ func (dm *DownloadManager) cleanupExpired() {
 
 	for _, dl := range dbDownloads {
 		if dl.ExpiryDate > 0 && dl.ExpiryDate < now.Unix() {
+			// Skip if download is still active
+			dm.mu.RLock()
+			_, isActive := dm.downloads[dl.Hash]
+			dm.mu.RUnlock()
+			if isActive {
+				log.TLogln("Skipping cleanup for active download:", dl.Hash)
+				continue
+			}
+
 			log.TLogln("Removing expired download:", dl.Hash)
 
 			os.RemoveAll(dl.Path)
