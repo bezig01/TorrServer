@@ -210,7 +210,13 @@
     "UseIINA": "Solicitare pentru deschiderea videoclipului în IINA",
     "UseIINAHint": "Adăugați butonul IINA player la lista de conținut torrent (doar macOS)",
     "ViewedHistoryStorage": "Istoricul vizualizărilor stocate:",
-    "ViewedStorageHint": "Alegeți unde să stocați istoricul vizualizat"
+    "ViewedStorageHint": "Alegeți unde să stocați istoricul vizualizat",
+    "EnableDownload": "Pre-descărcare",
+    "EnableDownloadHint": "Descarcă torrente pe disc pentru vizionare offline",
+    "DownloadPath": "Cale descărcare",
+    "DownloadPathHint": "Director pentru fișierele descărcate",
+    "DownloadTTL": "Timp de păstrare (minute)",
+    "DownloadTTLHint": "0 = fără expirare, 43200 = 30 zile"
   },
   "Size": "Mărime",
   "SpecialThanks": "Mulțumiri speciale",
@@ -271,5 +277,6 @@
   "Uncategorized": "Necategorizat",
   "UploadFile": "Upload fișier",
   "UploadSpeed": "Viteza de Upload",
-  "Viewed": "Vizualizat"
+  "Viewed": "Vizualizat",
+  "TorrentDownloading": "Se descarcă"
 }

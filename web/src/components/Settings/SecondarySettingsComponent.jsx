@@ -476,21 +476,21 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         )}
       </Box>
       {/* Download Section */}
-      <SettingSectionLabel style={{ marginTop: '20px' }}>Download</SettingSectionLabel>
+      <SettingSectionLabel style={{ marginTop: '20px' }}>{t('Download')}</SettingSectionLabel>
       <FormGroup>
         <FormControlLabel
           control={<Switch checked={EnableDownload} onChange={inputForm} id='EnableDownload' color='secondary' />}
-          label='Enable Pre-Download'
+          label={t('SettingsDialog.EnableDownload')}
           labelPlacement='start'
         />
-        <FormHelperText margin='none'>Enable full torrent download for offline viewing</FormHelperText>
+        <FormHelperText margin='none'>{t('SettingsDialog.EnableDownloadHint')}</FormHelperText>
       </FormGroup>
       <TextField
         onChange={inputForm}
         margin='normal'
         id='DownloadPath'
-        label='Download Path'
-        helperText='Directory path for downloaded files'
+        label={t('SettingsDialog.DownloadPath')}
+        helperText={t('SettingsDialog.DownloadPathHint')}
         value={DownloadPath}
         type='url'
         variant='outlined'
@@ -501,8 +501,8 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         onChange={inputForm}
         margin='normal'
         id='DownloadTTL'
-        label='Default TTL (minutes)'
-        helperText='Default time-to-live for downloads (0 = no expiry). 43200 = 30 days'
+        label={t('SettingsDialog.DownloadTTL')}
+        helperText={t('SettingsDialog.DownloadTTLHint')}
         value={DownloadTTL}
         type='number'
         variant='outlined'

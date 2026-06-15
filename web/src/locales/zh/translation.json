@@ -210,7 +210,13 @@
     "UseIINA": "提示在 IINA 中打开视频",
     "UseIINAHint": "将 IINA 播放器按钮添加到种子内容列表（仅 macOS）",
     "ViewedHistoryStorage": "查看历史存储：",
-    "ViewedStorageHint": "存储查看历史记录的位置"
+    "ViewedStorageHint": "存储查看历史记录的位置",
+    "EnableDownload": "预下载",
+    "EnableDownloadHint": "下载种子到磁盘以供离线观看",
+    "DownloadPath": "下载路径",
+    "DownloadPathHint": "下载文件的目录路径",
+    "DownloadTTL": "保留时间（分钟）",
+    "DownloadTTLHint": "0 = 永不过期, 43200 = 30天"
   },
   "Size": "大小",
   "SpecialThanks": "特别感谢",
@@ -271,5 +277,6 @@
   "Uncategorized": "未分类",
   "UploadFile": "上传文件",
   "UploadSpeed": "上传速度",
-  "Viewed": "查看"
+  "Viewed": "查看",
+  "TorrentDownloading": "下载中"
 }

@@ -210,7 +210,13 @@
     "UseIINA": "Demander d'ouvrir la vidéo dans IINA",
     "UseIINAHint": "Ajouter un bouton de lecteur IINA à la liste de contenu du torrent (macOS uniquement)",
     "ViewedHistoryStorage": "Stockage de l'historique des vues :",
-    "ViewedStorageHint": "Choisissez où stocker l'historique des vues"
+    "ViewedStorageHint": "Choisissez où stocker l'historique des vues",
+    "EnableDownload": "Pré-téléchargement",
+    "EnableDownloadHint": "Télécharger les torrents pour visionnage hors ligne",
+    "DownloadPath": "Chemin de téléchargement",
+    "DownloadPathHint": "Répertoire pour les fichiers téléchargés",
+    "DownloadTTL": "Durée de conservation (minutes)",
+    "DownloadTTLHint": "0 = pas d'expiration, 43200 = 30 jours"
   },
   "Size": "Taille",
   "SpecialThanks": "Remerciements spéciaux",
@@ -271,5 +277,6 @@
   "Uncategorized": "Non catégorisé",
   "UploadFile": "Téléverser un fichier",
   "UploadSpeed": "Vitesse de téléversement",
-  "Viewed": "Vu"
+  "Viewed": "Vu",
+  "TorrentDownloading": "Téléchargement"
 }
