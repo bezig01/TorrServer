@@ -49,30 +49,35 @@ const docTemplate = `{
                 }
             }
         },
-        "/download/{size}": {
-            "get": {
-                "description": "Download the test file of given size (for speed testing purpose).",
+        "/download": {
+            "post": {
+                "description": "List all active and completed downloads",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
-                    "application/octet-stream"
+                    "application/json"
                 ],
                 "tags": [
                     "API"
                 ],
-                "summary": "Generates test file of given size",
+                "summary": "List all downloads",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Test file size (in MB)",
-                        "name": "size",
-                        "in": "path",
-                        "required": true
+                        "description": "Download list request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.downloadReqJS"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "List of downloads",
                         "schema": {
-                            "type": "file"
+                            "type": "object"
                         }
                     }
                 }
@@ -759,6 +764,21 @@ const docTemplate = `{
                 }
             }
         },
+        "api.downloadReqJS": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "ttl": {
+                    "description": "minutes, 0 = no expiry",
+                    "type": "integer"
+                }
+            }
+        },
         "api.setsReqJS": {
             "type": "object",
             "properties": {
@@ -898,8 +918,16 @@ const docTemplate = `{
                 "disableUpload": {
                     "type": "boolean"
                 },
+                "downloadPath": {
+                    "description": "path for downloaded files",
+                    "type": "string"
+                },
                 "downloadRateLimit": {
                     "description": "in kb, 0 - inf",
+                    "type": "integer"
+                },
+                "downloadTTL": {
+                    "description": "default TTL in minutes (0 = no expiry)",
                     "type": "integer"
                 },
                 "enableDLNA": {
@@ -908,6 +936,10 @@ const docTemplate = `{
                 },
                 "enableDebug": {
                     "description": "debug logs",
+                    "type": "boolean"
+                },
+                "enableDownload": {
+                    "description": "Download",
                     "type": "boolean"
                 },
                 "enableIPv6": {
@@ -1162,7 +1194,8 @@ const docTemplate = `{
                 2,
                 3,
                 4,
-                5
+                5,
+                6
             ],
             "x-enum-varnames": [
                 "TorrentAdded",
@@ -1170,7 +1203,8 @@ const docTemplate = `{
                 "TorrentPreload",
                 "TorrentWorking",
                 "TorrentClosed",
-                "TorrentInDB"
+                "TorrentInDB",
+                "TorrentDownloading"
             ]
         },
         "state.TorrentStatus": {

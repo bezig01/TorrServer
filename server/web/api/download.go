@@ -8,12 +8,26 @@ import (
 	"server/torr"
 )
 
+// downloadReqJS represents the download request body
 type downloadReqJS struct {
 	requestI
 	Hash string `json:"hash,omitempty"`
 	TTL  int    `json:"ttl,omitempty"` // minutes, 0 = no expiry
 }
 
+// download godoc
+//
+//	@Summary		Handle download operations
+//	@Description	Download, cancel, get status, or list downloaded torrents
+//
+//	@Tags			API
+//
+//	@Param			request	body	downloadReqJS	true	"Download request. Available actions: start (requires hash, optional ttl), cancel (requires hash), status (requires hash), list"
+//
+//	@Accept			json
+//	@Produce		json
+//	@Success		200
+//	@Router			/download [post]
 func download(c *gin.Context) {
 	var req downloadReqJS
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,6 +49,22 @@ func download(c *gin.Context) {
 	}
 }
 
+// startDownload godoc
+//
+//	@Summary		Start downloading a torrent
+//	@Description	Begin downloading all files of a torrent to disk for offline viewing
+//
+//	@Tags			API
+//
+//	@Param			request	body	downloadReqJS	true	"Download start request"
+//
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	object	"Download started"
+//	@Failure		400
+//	@Failure		404
+//	@Failure		500
+//	@Router			/download [post]
 func startDownload(c *gin.Context, req downloadReqJS) {
 	if req.Hash == "" {
 		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
@@ -65,6 +95,21 @@ func startDownload(c *gin.Context, req downloadReqJS) {
 	})
 }
 
+// cancelDownload godoc
+//
+//	@Summary		Cancel a download
+//	@Description	Cancel an active download and remove partial files
+//
+//	@Tags			API
+//
+//	@Param			request	body	downloadReqJS	true	"Download cancel request"
+//
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	object	"Download cancelled"
+//	@Failure		400
+//	@Failure		500
+//	@Router			/download [post]
 func cancelDownload(c *gin.Context, req downloadReqJS) {
 	if req.Hash == "" {
 		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
@@ -83,6 +128,21 @@ func cancelDownload(c *gin.Context, req downloadReqJS) {
 	})
 }
 
+// getDownloadStatus godoc
+//
+//	@Summary		Get download status
+//	@Description	Get current status of a download including progress
+//
+//	@Tags			API
+//
+//	@Param			request	body	downloadReqJS	true	"Download status request"
+//
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	object	"Download status"
+//	@Failure		400
+//	@Failure		404
+//	@Router			/download [post]
 func getDownloadStatus(c *gin.Context, req downloadReqJS) {
 	if req.Hash == "" {
 		c.AbortWithError(http.StatusBadRequest, http.ErrNoLocation)
@@ -122,6 +182,19 @@ func getDownloadStatus(c *gin.Context, req downloadReqJS) {
 	})
 }
 
+// listDownloads godoc
+//
+//	@Summary		List all downloads
+//	@Description	List all active and completed downloads
+//
+//	@Tags			API
+//
+//	@Param			request	body	downloadReqJS	true	"Download list request"
+//
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	object	"List of downloads"
+//	@Router			/download [post]
 func listDownloads(c *gin.Context) {
 	dlMgr := torr.GetDownloadManager()
 	downloads := dlMgr.ListDownloads()

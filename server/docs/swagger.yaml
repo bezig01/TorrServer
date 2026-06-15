@@ -7,6 +7,16 @@ definitions:
       hash:
         type: string
     type: object
+  api.downloadReqJS:
+    properties:
+      action:
+        type: string
+      hash:
+        type: string
+      ttl:
+        description: minutes, 0 = no expiry
+        type: integer
+    type: object
   api.setsReqJS:
     properties:
       action:
@@ -99,14 +109,23 @@ definitions:
         type: boolean
       disableUpload:
         type: boolean
+      downloadPath:
+        description: path for downloaded files
+        type: string
       downloadRateLimit:
         description: in kb, 0 - inf
+        type: integer
+      downloadTTL:
+        description: default TTL in minutes (0 = no expiry)
         type: integer
       enableDLNA:
         description: DLNA
         type: boolean
       enableDebug:
         description: debug logs
+        type: boolean
+      enableDownload:
+        description: Download
         type: boolean
       enableIPv6:
         description: BT Config
@@ -284,6 +303,7 @@ definitions:
     - 3
     - 4
     - 5
+    - 6
     type: integer
     x-enum-varnames:
     - TorrentAdded
@@ -292,6 +312,7 @@ definitions:
     - TorrentWorking
     - TorrentClosed
     - TorrentInDB
+    - TorrentDownloading
   state.TorrentStatus:
     properties:
       active_peers:
@@ -398,23 +419,26 @@ paths:
       summary: Return cache stats
       tags:
       - API
-  /download/{size}:
-    get:
-      description: Download the test file of given size (for speed testing purpose).
+  /download:
+    post:
+      consumes:
+      - application/json
+      description: List all active and completed downloads
       parameters:
-      - description: Test file size (in MB)
-        in: path
-        name: size
+      - description: Download list request
+        in: body
+        name: request
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/api.downloadReqJS'
       produces:
-      - application/octet-stream
+      - application/json
       responses:
         "200":
-          description: OK
+          description: List of downloads
           schema:
-            type: file
-      summary: Generates test file of given size
+            type: object
+      summary: List all downloads
       tags:
       - API
   /echo:
